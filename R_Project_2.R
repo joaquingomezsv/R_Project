@@ -1,3 +1,4 @@
+#Installation of Packages
 library(tidyverse)
 library(readxl)
 library(xlsx)
@@ -5,20 +6,11 @@ library(dplyr)
 library(lubridate)
 library(ggplot2)
 
+#Data Importation and Cleaning
 merged_data2 = read_excel('merged_index_data.xlsx')
-
-str(merged_data2)
-head(merged_data2)
-
 names(merged_data2) <- gsub(' ','.', names(merged_data2))
-
-
-
 merged_data2$Year <- as.Date(ISOdate(merged_data2$Year, 1, 1))  # beginning of year
 merged_data2['Year'] <- year(merged_data2$Year)
-
-head(merged_data2)
-
 merged_data2 = transform(merged_data2, World.Rank = as.integer(World.Rank))
 merged_data2 = transform(merged_data2, Region.Rank = as.integer(Region.Rank))
 merged_data2 = transform(merged_data2, Score = as.numeric(Score))
@@ -48,13 +40,28 @@ merged_data2 = transform(merged_data2, Unemployment = as.numeric(Unemployment))
 merged_data2 = transform(merged_data2, Inflation = as.numeric(Inflation))
 merged_data2 = transform(merged_data2, FDI.Inflow = as.numeric(FDI.Inflow))
 merged_data2 = transform(merged_data2, Public.Debt = as.numeric(Public.Debt))
-
 merged_data2$Country.Name[merged_data2$Country.Name=="Hong Kong SAR"]<-"Hong Kong"
-
-str(merged_data2)
-
 merged_data2 = merged_data2 %>% drop_na()
+merged_data2 = merged_data2 %>% mutate(Quartile = ifelse(0 < Score & Score < 60 , 'Least Free',
+                                           ifelse(Score < 70, 'Moderately Free', 'Most Free')))
 
+#Data Visualization
+ggplot(data = merged_data2, aes(x = GDP.per.Capita, y = Score)) +
+  geom_point() + geom_smooth(method = "lm")
+
+
+ggplot(data = merged_data2, aes(x = Region, y = Score)) +
+  geom_point(aes(color = Region)) 
+
+ggplot(data = merged_data2, aes(x = GDP.per.Capita, y = Score)) +
+  geom_point(aes(color = Region)) + facet_wrap(. ~ Region)
+
+ggplot(data = merged_data2, aes(x = Region, y = Score)) + geom_boxplot()
+
+
+ggplot(data = merged_data2,aes(x = Score)) + geom_bar(aes(fill = Region))
+
+#Data Manipulation
 merged_data2 %>%
   group_by(Region) %>%
   summarise(mean_score = mean(Score)) %>%
@@ -63,6 +70,49 @@ merged_data2 %>%
 
 
 merged_data2 %>%
+  group_by(Country.Name) %>%
+  top_n(2, GDP.Billions.PPP) %>%
+  arrange(desc(GDP.Billions.PPP)) %>%
+  select(Country.Name, Year, GDP.Billions.PPP, Score, Region) 
+
+
+top_GDPs = merged_data2 %>%
+  group_by(Country.Name, Year) %>%
+  slice_max(GDP.Billions.PPP, n = 5) %>%
+  arrange(desc(GDP.Billions.PPP)) %>%
+  select(Country.Name, Year, GDP.Billions.PPP, Score, Region) 
+
+
+top_Scores = merged_data2 %>%
+  group_by(Country.Name, Year) %>%
+  slice_max(Score, n = 5) %>%
+  arrange(desc(Score)) %>%
+  select(Country.Name, Year, GDP.Billions.PPP, Score, Region) 
+
+#More Data Visualization
+ggplot(data = head(top_Scores, 20)) + aes(x = GDP.Billions.PPP, y = Score) + geom_point(aes(color = Country.Name))
+ggplot(data = tail(top_Scores, 20)) + aes(x = GDP.Billions.PPP, y = Score) + geom_point(aes(color = Country.Name))
+
+ggplot(data = head(top_GDPs, 50)) + aes(x = GDP.Billions.PPP, y = Score) + geom_point(aes(color = Country.Name))
+ggplot(data = tail(top_GDPs, 50)) + aes(x = GDP.Billions.PPP, y = Score) + geom_point(aes(color = Country.Name))
+
+ggplot(data=merged_data2 %>%
+         group_by(Country.Name) %>%
+         top_n(2, GDP.Billions.PPP) %>%
+         arrange(desc(GDP.Billions.PPP)) %>%
+         select(Country.Name, Year, GDP.Billions.PPP, Score, Region)) + aes(x = GDP.Billions.PPP, y = Score) +
+  geom_point(aes(color = Region))
+  
+
+ggplot(data=merged_data2 %>%
+         group_by(Region) %>%
+         summarise(mean_score = mean(Score)) %>%
+         top_n(5, mean_score) %>%
+         arrange(desc(mean_score))) +
+  geom_bar(aes(x=Region,fill=mean_score), position = 'dodge')
+
+#More Data Manipulation
+emerged_data2 %>%
   group_by(Region, Country.Name) %>%
   summarise(mean_score = mean(Score)) %>%
   top_n(5, mean_score) %>%
@@ -161,7 +211,7 @@ merged_data2 %>%
   top_n(5, mean_score) %>%
   arrange(desc(mean_score))
 
-
+#Feature Generation
 data_2017_x = filter(merged_data2,Year=='2017')
 data_2017_x = select(data_2017, Country.Name, Region.Rank, World.Rank, Score)
 data_2022_x = filter(merged_data2,Year=='2022')
@@ -175,13 +225,12 @@ merged_2017_2022 = merged_2017_2022 %>%
 merged_2017_2022['Change in World Rank'] = merged_2017_2022['world_rank_2022'] - merged_2017_2022['world_rank_2017']
 merged_2017_2022['Change in Region Rank'] = merged_2017_2022['region_rank_2022'] - merged_2017_2022['region_rank_2017']
 merged_2017_2022['Change in Score'] = merged_2017_2022['score_2022'] - merged_2017_2022['score_2017']
-merged_2017_2022
+
 
 merged_data2 = inner_join(merged_data2, merged_2017_2022, by='Country.Name')
 
-merged_data2
 
-
+#Data Manipulation
 merged_data2 %>%
   group_by(Region) %>%
   summarise(mean_change_in_world_rank = mean(Change.in.World.Rank))
@@ -304,20 +353,72 @@ merged_data2 %>%
   top_n(5, mean_score) %>%
   arrange(desc(mean_score))
 
-summary(merged_data2) #Summary of Features
-sapply(merged_data2, sd) #Standard deviations 
+
+merged_data2 %>%
+  group_by(Year, Region) %>%
+  summarise(Mean_Rule_of_Law = mean(c(Property.Rights,Government.Integrity,Judical.Effectiveness)))
+
+#Data Visualization cont.
+ggplot(data = merged_data2 %>%
+         group_by(Year, Country.Name, Region) %>%
+         summarise(Mean_Rule_of_Law = mean(c(Property.Rights,Government.Integrity,Judical.Effectiveness))), 
+       aes(x = Region, y = Mean_Rule_of_Law)) + geom_boxplot()
 
 
+merged_data2 %>%
+  group_by(Year, Region) %>%
+  summarise(Mean_Government_Size = mean(c(Gov.t.Spending,Tax.Burden,Fiscal.Health)))
+
+ggplot(data = merged_data2 %>%
+         group_by(Year, Region) %>%
+         summarise(Mean_Government_Size = mean(c(Gov.t.Spending,Tax.Burden,Fiscal.Health))), 
+       aes(x = Region, y = Mean_Government_Size)) + geom_boxplot()
+
+
+merged_data2 %>%
+  group_by(Year, Region) %>%
+  summarise(Mean_Regulatory_Efficiency = mean(c(Business.Freedom,Labor.Freedom,Monetary.Freedom)))
+
+ggplot(merged_data2 %>%
+         group_by(Year, Region) %>%
+         summarise(Mean_Regulatory_Efficiency = mean(c(Business.Freedom,Labor.Freedom,Monetary.Freedom))), 
+       aes(x = Region, y = Mean_Regulatory_Efficiency)) + geom_boxplot()
+
+
+merged_data2 %>%
+  group_by(Year, Region) %>%
+  summarise(Mean_Open_Markets = mean(c(Trade.Freedom,Investment.Freedom,Financial.Freedom)))
+
+ggplot(merged_data2 %>%
+         group_by(Year, Region) %>%
+         summarise(Mean_Open_Markets = mean(c(Trade.Freedom,Investment.Freedom,Financial.Freedom))), 
+       aes(x = Region, y = Mean_Open_Markets)) + geom_boxplot()
+
+summary(merged_data2) 
+sapply(merged_data2, sd) 
+
+#Linear Regression
 model = lm(Score ~ Property.Rights + Judical.Effectiveness + Government.Integrity + Tax.Burden + Gov.t.Spending + Fiscal.Health + Business.Freedom
            + Labor.Freedom + Monetary.Freedom + Trade.Freedom + Investment.Freedom + Financial.Freedom + Tariff.Rate 
            + Income.Tax.Rate + Corporate.Tax.Rate + Tax.Burden.of.GDP + Gov.t.Expenditure.of.GDP + Population.Millions +
-             GDP.Billions.PPP + GDP.Growth.Rate + X5.Year.GDP.Growth.Rate + GDP.per.Capita + Unemployment + Inflation + FDI.Inflow + Public.Debt, data = merged_data2) #Use the linear model function lm() to
-#conduct the simple linear regression.
+             GDP.Billions.PPP + GDP.Growth.Rate + X5.Year.GDP.Growth.Rate + GDP.per.Capita + Unemployment + Inflation + FDI.Inflow + Public.Debt, data = merged_data2)
+
+AIC(model)
 
 summary(model)
 
 model = lm(Score ~ Tariff.Rate + Income.Tax.Rate + Corporate.Tax.Rate + Tax.Burden.of.GDP + Gov.t.Expenditure.of.GDP 
-          +GDP.Billions.PPP  + X5.Year.GDP.Growth.Rate + GDP.per.Capita + Inflation + FDI.Inflow + Public.Debt, data = merged_data2) #Use the linear model function lm() to
-#conduct the simple linear regression.
+          +GDP.Billions.PPP  + X5.Year.GDP.Growth.Rate + GDP.per.Capita + Inflation + FDI.Inflow + Public.Debt, data = merged_data2) 
+
+
+AIC(model)
+BIC(model)
+
+summary(model)
+
+model = lm(GDP.Billions.PPP ~ Property.Rights + Judical.Effectiveness + Government.Integrity + Tax.Burden + Gov.t.Spending + Fiscal.Health + Business.Freedom
+           + Labor.Freedom + Monetary.Freedom + Investment.Freedom + Financial.Freedom + Tariff.Rate 
+           + Income.Tax.Rate + Corporate.Tax.Rate + Gov.t.Expenditure.of.GDP + Population.Millions +
+             Score + FDI.Inflow + Public.Debt, data = merged_data2) #
 
 summary(model)
