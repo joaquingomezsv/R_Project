@@ -404,7 +404,7 @@ ggplot(
     arrange(mean_score),
   aes(x = reorder(Country.Name,-mean_score), y = mean_score)
 ) +
-  geom_bar(stat = 'identity', aes(fill = factor(mean_score))) + xlab('Country') + ylab('Mean Score') + theme(legend.position = "none") + scale_y_continuous(limits =
+  geom_bar(stat = 'identity', aes(fill = factor(mean_score))) + xlab('Country') + ylab('Mean Score') + theme(x.position = "none") + scale_y_continuous(limits =
                                                                                                                                                               c(0, 80))  + theme(axis.text = element_text(size = 12),
                                                                                                                                                                                  axis.title =
                                                                                                                                                                                    element_text(size = 14, face = "bold"))
@@ -612,6 +612,37 @@ ggplot(merged_data2 %>%
          group_by(Year, Region) %>%
          summarise(Mean_Open_Markets = mean(c(Trade.Freedom,Investment.Freedom,Financial.Freedom))), 
        aes(x = Region, y = Mean_Open_Markets)) + geom_boxplot()
+
+barbados_sudan = filter(merged_data2, Country.Name == 'Barbados' | Country.Name == 'Sudan') %>%
+  select(c(Country.Name, Year, Score, GDP.per.Capita, Mean_Rule_of_Law, Mean_Regulatory_Efficiency, Mean_Government_Size, Mean_Open_Markets)) %>%
+  arrange(Country.Name)
+
+barbados_sudan
+
+barbados_sudan %>%
+  pivot_longer(cols = c(Score, GDP.per.Capita, Mean_Rule_of_Law, Mean_Regulatory_Efficiency, Mean_Government_Size, Mean_Open_Markets), names_to = "Week",
+               values_to = "Year")
+
+barbados_sudan %>%
+  pivot_wider(names_from = Year, values_from = c(Score, GDP.per.Capita, Mean_Rule_of_Law, Mean_Regulatory_Efficiency, Mean_Government_Size, Mean_Open_Markets))
+
+filter(merged_data2, Country.Name == 'Barbados') %>%
+  select(c(Country.Name, Year, Score, GDP.per.Capita, Mean_Rule_of_Law, Mean_Regulatory_Efficiency, Mean_Government_Size, Mean_Open_Markets))
+
+ggplot(data = filter(merged_data2, Country.Name == 'Barbados') %>%
+         select(c(Country.Name, Year, Score, GDP.per.Capita, Mean_Rule_of_Law, Mean_Regulatory_Efficiency, Mean_Government_Size, Mean_Open_Markets)), 
+       + geom_point())
+
+filter(merged_data2, Country.Name == 'Sudan') %>%
+  select(c(Country.Name, Year, Score, GDP.per.Capita, Mean_Rule_of_Law, Mean_Regulatory_Efficiency, Mean_Government_Size, Mean_Open_Markets))
+
+g <- ggplot(data = filter(
+  merged_data2,
+  Country.Name == 'Barbados' | Country.Name == 'Sudan'
+) %>%
+  select(c(Country.Name, Year, Score, GDP.per.Capita)), aes(x = Year, y = Score))
+g + geom_point(size = 5, aes(color = Country.Name)) + theme(axis.text=element_text(size=12),axis.title=element_text(size=14,face="bold"), legend.text = element_text(size = 10), legend.title = element_text(face = 'bold')) + labs(color='Country')
+
 
 #Linear Regression
 model = lm(Score ~ X5.Year.GDP.Growth.Rate + GDP.per.Capita + Public.Debt, data = merged_data2)
